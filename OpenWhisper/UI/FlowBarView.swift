@@ -37,9 +37,7 @@ struct FlowBarView: View {
     private var orbBackground: some View {
         ZStack {
             Circle()
-                .fill(.ultraThinMaterial)
-            Circle()
-                .fill(Color.black.opacity(0.35))
+                .fill(Color.black.opacity(0.55))
             Circle()
                 .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
         }

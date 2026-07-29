@@ -60,7 +60,7 @@ final class FlowBarController {
         panel.level = .statusBar  // Above floating windows
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false  // the orb draws its own shadow — an AppKit one halos the transparent canvas
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.isMovableByWindowBackground = true
         panel.hidesOnDeactivate = false
