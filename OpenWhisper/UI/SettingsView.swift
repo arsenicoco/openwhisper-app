@@ -1,5 +1,20 @@
 import SwiftUI
 
+// MARK: - Design Tokens
+
+enum OW {
+    static let teal = Color(red: 0.08, green: 0.72, blue: 0.65)
+    static let cardRadius: CGFloat = 12
+    static let iconColumn: CGFloat = 20
+    static let controlWidth: CGFloat = 152
+    static let panelWidth: CGFloat = 348
+
+    /// Card fill and hairline — both derived from .primary so they invert with the appearance.
+    static let cardFill = Color.primary.opacity(0.05)
+    static let cardStroke = Color.primary.opacity(0.08)
+    static let separator = Color.primary.opacity(0.07)
+}
+
 struct SettingsView: View {
     @Environment(AppState.self) var appState
 
@@ -9,195 +24,130 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 14) {
             header
 
-            Divider()
-
-            // Permissions
             permissionsSection
 
-            Divider()
-
-            // Model
-            HStack {
-                Label("Model", systemImage: "cpu")
-                Spacer()
-                Picker("", selection: $appState.whisperModel) {
-                    Text("Tiny (39 MB)").tag("tiny")
-                    Text("Base (140 MB)").tag("base")
-                    Text("Small (460 MB)").tag("small")
-                    Text("Small EN").tag("small.en")
-                }
-                .labelsHidden()
-                .frame(width: 150)
-                .onChange(of: appState.whisperModel) {
-                    Task { await appState.loadModel() }
-                }
-            }
-
-            // Language
-            HStack {
-                Label("Language", systemImage: "globe")
-                Spacer()
-                Picker("", selection: $appState.language) {
-                    Text("Auto-detect").tag("")
-                    Text("English").tag("en")
-                    Text("Spanish").tag("es")
-                    Text("French").tag("fr")
-                    Text("German").tag("de")
-                    Text("Hindi").tag("hi")
-                    Text("Telugu").tag("te")
-                    Text("Tamil").tag("ta")
-                    Text("Kannada").tag("kn")
-                    Text("Malayalam").tag("ml")
-                    Text("Bengali").tag("bn")
-                    Text("Marathi").tag("mr")
-                    Text("Gujarati").tag("gu")
-                    Text("Urdu").tag("ur")
-                    Text("Punjabi").tag("pa")
-                    Text("Japanese").tag("ja")
-                    Text("Chinese").tag("zh")
-                    Text("Korean").tag("ko")
-                    Text("Russian").tag("ru")
-                    Text("Portuguese").tag("pt")
-                    Text("Arabic").tag("ar")
-                    Text("Italian").tag("it")
-                    Text("Dutch").tag("nl")
-                    Text("Turkish").tag("tr")
-                    Text("Polish").tag("pl")
-                    Text("Thai").tag("th")
-                    Text("Vietnamese").tag("vi")
-                    Text("Indonesian").tag("id")
-                    Text("Ukrainian").tag("uk")
-                    Text("Swedish").tag("sv")
-                }
-                .labelsHidden()
-                .frame(width: 150)
-            }
-
-            // Input device
-            inputDeviceSection
-
-            Divider()
-
-            // LLM Cleanup
-            HStack {
-                Label("LLM Cleanup", systemImage: "sparkles")
-                Spacer()
-                if appState.llmCleanupEnabled {
-                    Circle()
-                        .fill(appState.ollamaAvailable ? .green : .red)
-                        .frame(width: 6, height: 6)
-                        .help(appState.ollamaAvailable ? "Ollama connected" : "Ollama not running")
-                }
-                Toggle("", isOn: $appState.llmCleanupEnabled)
-                    .toggleStyle(.switch)
+            OWSectionHeader("Transcription")
+            OWCard {
+                OWSettingRow(icon: "cpu", title: "Model") {
+                    Picker("", selection: $appState.whisperModel) {
+                        Text("Tiny (39 MB)").tag("tiny")
+                        Text("Base (140 MB)").tag("base")
+                        Text("Small (460 MB)").tag("small")
+                        Text("Small EN").tag("small.en")
+                    }
                     .labelsHidden()
-                    .controlSize(.small)
-            }
+                    .frame(width: OW.controlWidth, alignment: .trailing)
+                    .onChange(of: appState.whisperModel) {
+                        Task { await appState.loadModel() }
+                    }
+                }
 
-            // Auto-paste
-            HStack {
-                Label("Auto-paste", systemImage: "doc.on.clipboard")
-                Spacer()
-                Toggle("", isOn: $appState.autoPasteEnabled)
-                    .toggleStyle(.switch)
+                OWRowDivider()
+
+                OWSettingRow(icon: "globe", title: "Language") {
+                    Picker("", selection: $appState.language) {
+                        Text("Auto-detect").tag("")
+                        Text("English").tag("en")
+                        Text("Spanish").tag("es")
+                        Text("French").tag("fr")
+                        Text("German").tag("de")
+                        Text("Hindi").tag("hi")
+                        Text("Telugu").tag("te")
+                        Text("Tamil").tag("ta")
+                        Text("Kannada").tag("kn")
+                        Text("Malayalam").tag("ml")
+                        Text("Bengali").tag("bn")
+                        Text("Marathi").tag("mr")
+                        Text("Gujarati").tag("gu")
+                        Text("Urdu").tag("ur")
+                        Text("Punjabi").tag("pa")
+                        Text("Japanese").tag("ja")
+                        Text("Chinese").tag("zh")
+                        Text("Korean").tag("ko")
+                        Text("Russian").tag("ru")
+                        Text("Portuguese").tag("pt")
+                        Text("Arabic").tag("ar")
+                        Text("Italian").tag("it")
+                        Text("Dutch").tag("nl")
+                        Text("Turkish").tag("tr")
+                        Text("Polish").tag("pl")
+                        Text("Thai").tag("th")
+                        Text("Vietnamese").tag("vi")
+                        Text("Indonesian").tag("id")
+                        Text("Ukrainian").tag("uk")
+                        Text("Swedish").tag("sv")
+                    }
                     .labelsHidden()
-                    .controlSize(.small)
+                    .frame(width: OW.controlWidth, alignment: .trailing)
+                }
+
+                OWRowDivider()
+
+                inputDeviceRow
+
+                if appState.modelLoading || !appState.modelLoaded || appState.lastError != nil {
+                    OWRowDivider()
+                    statusBanner
+                }
             }
 
-            // Flow Bar
-            HStack {
-                Label("Flow Bar", systemImage: "rectangle.bottomhalf.filled")
-                Spacer()
-                Toggle("", isOn: $appState.flowBarEnabled)
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-                    .controlSize(.small)
+            OWSectionHeader("Behaviour")
+            OWCard {
+                OWSettingRow(
+                    icon: "sparkles",
+                    title: "LLM Cleanup",
+                    subtitle: llmSubtitle
+                ) {
+                    Toggle("", isOn: $appState.llmCleanupEnabled)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .controlSize(.mini)
+                        .tint(OW.teal)
+                }
+
+                OWRowDivider()
+
+                OWSettingRow(icon: "doc.on.clipboard", title: "Auto-paste") {
+                    Toggle("", isOn: $appState.autoPasteEnabled)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .controlSize(.mini)
+                        .tint(OW.teal)
+                }
+
+                OWRowDivider()
+
+                OWSettingRow(icon: "circle.dashed", title: "Flow Bar") {
+                    Toggle("", isOn: $appState.flowBarEnabled)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .controlSize(.mini)
+                        .tint(OW.teal)
+                }
+
+                OWRowDivider()
+
+                OWSettingRow(icon: "arrow.right.circle", title: "Launch at Login") {
+                    Toggle("", isOn: $appState.launchAtLogin)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .controlSize(.mini)
+                        .tint(OW.teal)
+                }
+
+                OWRowDivider()
+
+                OWSettingRow(icon: "keyboard", title: "Trigger") {
+                    KeyCap("Hold Right ⌥")
+                }
             }
 
-            // Launch at Login
-            HStack {
-                Label("Launch at Login", systemImage: "arrow.right.circle")
-                Spacer()
-                Toggle("", isOn: $appState.launchAtLogin)
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-                    .controlSize(.small)
-            }
-
-            Divider()
-
-            // Reminders
             remindersSection
 
-            Divider()
-
-            // Trigger hotkey
-            HStack {
-                Label("Trigger", systemImage: "keyboard")
-                Spacer()
-                Text("Hold Right ⌥")
-                    .font(.system(.body, design: .monospaced))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(.quaternary)
-                    )
-            }
-
-            // Model loading status
-            if appState.modelLoading {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text(appState.modelLoadProgress > 0
-                         ? (appState.modelIsDownloading
-                            ? "Downloading \(appState.whisperModel) model — \(Int(appState.modelLoadProgress * 100))%"
-                            : "Switching to \(appState.whisperModel) model...")
-                         : "Loading \(appState.whisperModel) model...")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            } else if !appState.modelLoaded {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.circle")
-                        .foregroundStyle(.orange)
-                    Text("Model not loaded")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            // Last error
-            if let error = appState.lastError {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.yellow)
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-            }
-
-            Divider()
-
-            // Footer
-            HStack {
-                Text("v1.0.0")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                Spacer()
-                Button("Quit OpenWhisper") {
-                    NSApplication.shared.terminate(nil)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.red)
-                .font(.callout)
-            }
+            footer
         }
-        .padding(16)
-        .frame(width: 330)
+        .padding(14)
+        .frame(width: OW.panelWidth)
         .onAppear {
             appState.refreshPermissions()
         }
@@ -206,30 +156,73 @@ struct SettingsView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack {
-            Image(systemName: "mic.fill")
-                .font(.title2)
-                .foregroundStyle(Color(red: 0.08, green: 0.72, blue: 0.65))
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 11) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(OW.teal.opacity(0.16))
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(OW.teal)
+            }
+            .frame(width: 34, height: 34)
+
+            VStack(alignment: .leading, spacing: 1) {
                 Text("OpenWhisper")
-                    .font(.headline)
+                    .font(.system(size: 14, weight: .semibold))
                 Text("100% local voice-to-text")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
             Spacer()
+
             StatusBadge(state: appState.recordingState)
+        }
+        .padding(.horizontal, 2)
+    }
+
+    // MARK: - Permissions
+
+    /// Granted permissions collapse to a pair of chips; anything missing gets a full row with a Grant button.
+    @ViewBuilder
+    private var permissionsSection: some View {
+        if appState.microphoneGranted && appState.accessibilityGranted {
+            HStack(spacing: 6) {
+                PermissionChip(icon: "mic.fill", label: "Microphone")
+                PermissionChip(icon: "hand.raised.fill", label: "Accessibility")
+                Spacer()
+            }
+            .padding(.horizontal, 2)
+        } else {
+            OWSectionHeader("Permissions")
+            OWCard {
+                PermissionRow(
+                    icon: "mic.fill",
+                    label: "Microphone",
+                    detail: "Voice recording",
+                    granted: appState.microphoneGranted,
+                    action: { openSystemSettings("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") }
+                )
+
+                OWRowDivider()
+
+                PermissionRow(
+                    icon: "hand.raised.fill",
+                    label: "Accessibility",
+                    detail: "Hotkey & auto-paste",
+                    granted: appState.accessibilityGranted,
+                    action: { openSystemSettings("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") }
+                )
+            }
         }
     }
 
-    // MARK: - Input Device Section
+    // MARK: - Input Device
 
-    private var inputDeviceSection: some View {
+    private var inputDeviceRow: some View {
         @Bindable var appState = appState
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Label("Input", systemImage: "mic.and.signal.meter")
-                Spacer()
+        return VStack(alignment: .leading, spacing: 0) {
+            OWSettingRow(icon: "mic.and.signal.meter", title: "Input") {
                 Picker("", selection: Binding(
                     get: { appState.inputDeviceUID ?? "" },
                     set: { appState.inputDeviceUID = $0.isEmpty ? nil : $0 }
@@ -241,20 +234,15 @@ struct SettingsView: View {
                     }
                 }
                 .labelsHidden()
-                .frame(width: 150)
+                .frame(width: OW.controlWidth, alignment: .trailing)
             }
 
             if appState.resolvedInputIsBluetooth {
-                HStack(alignment: .top, spacing: 4) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.orange)
-                    Text("Bluetooth headsets drop into low-quality call mode while dictating, which makes music sound distorted. Pick the built-in mic for best audio.")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.leading, 22)
+                InlineNote(
+                    icon: "info.circle",
+                    tint: .orange,
+                    text: "Bluetooth headsets drop into low-quality call mode while dictating, which makes music sound distorted. Pick the built-in mic for best audio."
+                )
             }
         }
         .onAppear {
@@ -262,100 +250,144 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Permissions Section
+    private var llmSubtitle: String? {
+        guard appState.llmCleanupEnabled else { return nil }
+        return appState.ollamaAvailable ? "Ollama connected" : "Ollama not running"
+    }
 
-    private var permissionsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Permissions")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+    // MARK: - Status Banner
 
-            PermissionRow(
-                icon: "mic.fill",
-                label: "Microphone",
-                detail: "Voice recording",
-                granted: appState.microphoneGranted,
-                action: { openSystemSettings("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") }
-            )
+    @ViewBuilder
+    private var statusBanner: some View {
+        if appState.modelLoading {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                Text(appState.modelLoadProgress > 0
+                     ? (appState.modelIsDownloading
+                        ? "Downloading \(appState.whisperModel) model — \(Int(appState.modelLoadProgress * 100))%"
+                        : "Switching to \(appState.whisperModel) model...")
+                     : "Loading \(appState.whisperModel) model...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+        } else if !appState.modelLoaded {
+            InlineNote(icon: "exclamationmark.circle", tint: .orange, text: "Model not loaded")
+        }
 
-            PermissionRow(
-                icon: "hand.raised.fill",
-                label: "Accessibility",
-                detail: "Hotkey & auto-paste",
-                granted: appState.accessibilityGranted,
-                action: { openSystemSettings("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") }
-            )
+        if let error = appState.lastError {
+            InlineNote(icon: "exclamationmark.triangle.fill", tint: .yellow, text: error, lineLimit: 2)
         }
     }
 
-    // MARK: - Reminders Section
+    // MARK: - Reminders
 
     private var remindersSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let reminders = ReminderManager.shared.reminders
+
+        return VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Reminders")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                OWSectionHeader("Reminders")
                 Spacer()
-                if !ReminderManager.shared.reminders.isEmpty {
+                if !reminders.isEmpty {
                     Button("Clear All") {
                         ReminderManager.shared.cancelAll()
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.red)
-                    .font(.caption)
+                    .font(.system(size: 10, weight: .medium))
+                    .padding(.horizontal, 2)
                 }
             }
 
-            let reminders = ReminderManager.shared.reminders
-            if reminders.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: "bell.slash")
-                        .foregroundStyle(.tertiary)
-                        .font(.system(size: 12))
-                    Text("No active reminders")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-            } else {
-                ForEach(reminders) { reminder in
-                    let fired = reminder.fireDate <= Date()
+            OWCard {
+                if reminders.isEmpty {
                     HStack(spacing: 8) {
-                        Image(systemName: fired ? "bell.and.waves.left.and.right" : "bell.fill")
-                            .foregroundStyle(fired ? .gray : .orange)
-                            .font(.system(size: 10))
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(reminder.task)
-                                .font(.callout)
-                                .lineLimit(1)
-                                .foregroundStyle(fired ? .secondary : .primary)
-                            Text(fired ? "Fired — \(formatReminderDate(reminder.fireDate))" : formatReminderDate(reminder.fireDate))
-                                .font(.caption2)
-                                .foregroundStyle(fired ? .tertiary : .secondary)
-                        }
-                        Spacer()
-                        Button {
-                            ReminderManager.shared.cancelReminder(id: reminder.id)
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.tertiary)
-                                .font(.system(size: 14))
-                        }
-                        .buttonStyle(.plain)
+                        Image(systemName: "bell.slash")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.tertiary)
+                            .frame(width: OW.iconColumn)
+                        Text("No reminders — say \u{201C}Remind me to…\u{201D} while dictating")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
                     }
-                    .padding(.vertical, 2)
-                    .opacity(fired ? 0.6 : 1.0)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                } else {
+                    ForEach(Array(reminders.enumerated()), id: \.element.id) { index, reminder in
+                        if index > 0 { OWRowDivider() }
+                        reminderRow(reminder)
+                    }
                 }
             }
-
-            HStack(spacing: 4) {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 10))
-                Text("Say \"Remind me to...\" to set a reminder")
-                    .font(.caption2)
-            }
-            .foregroundStyle(.quaternary)
         }
+    }
+
+    private func reminderRow(_ reminder: ReminderManager.Reminder) -> some View {
+        let fired = reminder.fireDate <= Date()
+        return HStack(spacing: 8) {
+            Image(systemName: fired ? "bell.and.waves.left.and.right" : "bell.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(fired ? Color.secondary : .orange)
+                .frame(width: OW.iconColumn)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(reminder.task)
+                    .font(.system(size: 12))
+                    .lineLimit(1)
+                    .foregroundStyle(fired ? .secondary : .primary)
+                Text(fired ? "Fired — \(formatReminderDate(reminder.fireDate))" : formatReminderDate(reminder.fireDate))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                ReminderManager.shared.cancelReminder(id: reminder.id)
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 13))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .opacity(fired ? 0.65 : 1.0)
+    }
+
+    // MARK: - Footer
+
+    private var footer: some View {
+        HStack {
+            Text("v1.0.0")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+
+            Spacer()
+
+            Button {
+                NSApplication.shared.terminate(nil)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "power")
+                        .font(.system(size: 10, weight: .semibold))
+                    Text("Quit")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(.red)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(Capsule().fill(Color.red.opacity(0.12)))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 2)
     }
 
     private func formatReminderDate(_ date: Date) -> String {
@@ -378,7 +410,147 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Permission Row
+// MARK: - Building Blocks
+
+/// Grouped container that replaces the old full-width Dividers.
+struct OWCard<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content
+        }
+        .background(
+            RoundedRectangle(cornerRadius: OW.cardRadius, style: .continuous)
+                .fill(OW.cardFill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: OW.cardRadius, style: .continuous)
+                .strokeBorder(OW.cardStroke, lineWidth: 0.5)
+        )
+    }
+}
+
+struct OWSectionHeader: View {
+    let title: String
+
+    init(_ title: String) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(title.uppercased())
+            .font(.system(size: 10, weight: .semibold))
+            .tracking(0.6)
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 4)
+    }
+}
+
+/// Hairline between rows, inset past the icon column.
+struct OWRowDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(OW.separator)
+            .frame(height: 0.5)
+            .padding(.leading, 12 + OW.iconColumn + 10)
+    }
+}
+
+struct OWSettingRow<Trailing: View>: View {
+    let icon: String
+    let title: String
+    var subtitle: String? = nil
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .frame(width: OW.iconColumn)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.system(size: 13))
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            trailing
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+}
+
+/// Small explanatory line that sits under a row inside its card.
+struct InlineNote: View {
+    let icon: String
+    let tint: Color
+    let text: String
+    var lineLimit: Int? = nil
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundStyle(tint)
+            Text(text)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(lineLimit)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 9)
+    }
+}
+
+struct KeyCap: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(Color.primary.opacity(0.08)))
+            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.09), lineWidth: 0.5))
+    }
+}
+
+// MARK: - Permissions
+
+struct PermissionChip: View {
+    let icon: String
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 9))
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+            Image(systemName: "checkmark")
+                .font(.system(size: 8, weight: .bold))
+        }
+        .foregroundStyle(.green)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(Color.green.opacity(0.12)))
+    }
+}
 
 struct PermissionRow: View {
     let icon: String
@@ -390,34 +562,33 @@ struct PermissionRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 12))
+                .font(.system(size: 13))
                 .foregroundStyle(granted ? .green : .orange)
-                .frame(width: 18)
+                .frame(width: OW.iconColumn)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(label)
-                    .font(.callout)
+                    .font(.system(size: 13))
                 Text(detail)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
             if granted {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .font(.system(size: 14))
             } else {
-                Button("Grant") {
-                    action()
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .tint(.orange)
+                Button("Grant", action: action)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .tint(.orange)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 }
 
@@ -427,16 +598,19 @@ struct StatusBadge: View {
     let state: AppState.RecordingState
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
             Circle()
                 .fill(color)
                 .frame(width: 6, height: 6)
             Text(text)
-                .font(.caption)
+                .font(.system(size: 11, weight: .medium))
         }
-        .padding(.horizontal, 8)
+        .foregroundStyle(color)
+        .padding(.horizontal, 9)
         .padding(.vertical, 4)
-        .background(Capsule().fill(color.opacity(0.15)))
+        .background(Capsule().fill(color.opacity(0.14)))
+        .overlay(Capsule().strokeBorder(color.opacity(0.22), lineWidth: 0.5))
+        .animation(.spring(duration: 0.3), value: state)
     }
 
     private var color: Color {
