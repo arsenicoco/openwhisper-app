@@ -11,6 +11,39 @@ APP_DIR="build/OpenWhisper.app/Contents"
 EXEC_SRC=".build/debug/OpenWhisper"
 BUNDLE_SRC=".build/debug/OpenWhisper_OpenWhisper.bundle"
 
+# Scaffold the .app skeleton (build/ is gitignored, so a fresh clone has none)
+mkdir -p "$APP_DIR/MacOS" "$APP_DIR/Resources"
+if [ ! -f "$APP_DIR/Info.plist" ]; then
+    cat > "$APP_DIR/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>OpenWhisper</string>
+	<key>CFBundleExecutable</key>
+	<string>OpenWhisper</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.openwhisper.app</string>
+	<key>CFBundleName</key>
+	<string>OpenWhisper</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>OpenWhisper needs microphone access to transcribe your speech to text.</string>
+</dict>
+</plist>
+PLIST
+fi
+
 # Copy executable
 cp "$EXEC_SRC" "$APP_DIR/MacOS/OpenWhisper"
 
