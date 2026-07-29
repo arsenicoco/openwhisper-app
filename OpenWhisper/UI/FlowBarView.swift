@@ -3,8 +3,17 @@ import SwiftUI
 struct FlowBarView: View {
     @Environment(AppState.self) var appState
 
+    /// Diameter of the orb — 50% larger than the old 32pt pill.
+    static let orbSize: CGFloat = 48
+    /// Canvas the orb sits in, leaving room for the audio-reactive halo.
+    static let canvasSize: CGFloat = 64
+
     var body: some View {
-        HStack(spacing: 6) {
+        ZStack {
+            halo
+
+            orbBackground
+
             switch appState.recordingState {
             case .idle:
                 idleContent
@@ -14,23 +23,8 @@ struct FlowBarView: View {
                 transcribingContent
             }
         }
-        .padding(.horizontal, isIdle ? 10 : 12)
-        .padding(.vertical, isIdle ? 5 : 6)
-        .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color.black.opacity(0.35))
-            }
-            .shadow(color: .black.opacity(0.25), radius: 8, y: 2)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(.white.opacity(0.1), lineWidth: 0.5)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .opacity(appState.recordingState == .idle ? 0.45 : 1.0)
+        .frame(width: Self.canvasSize, height: Self.canvasSize)
+        .opacity(isIdle ? 0.45 : 1.0)
         .animation(.spring(duration: 0.3), value: appState.recordingState)
     }
 
@@ -38,33 +32,60 @@ struct FlowBarView: View {
         appState.recordingState == .idle
     }
 
+    // MARK: - Orb chrome
+
+    private var orbBackground: some View {
+        ZStack {
+            Circle()
+                .fill(.ultraThinMaterial)
+            Circle()
+                .fill(Color.black.opacity(0.35))
+            Circle()
+                .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
+        }
+        .frame(width: Self.orbSize, height: Self.orbSize)
+        .shadow(color: .black.opacity(0.3), radius: 10, y: 3)
+    }
+
+    /// Ring that breathes with the mic level while recording, and spins while transcribing.
+    @ViewBuilder
+    private var halo: some View {
+        switch appState.recordingState {
+        case .idle:
+            EmptyView()
+        case .recording:
+            LevelHalo(level: appState.audioLevel, size: Self.orbSize, color: .red)
+        case .transcribing:
+            RotatingArc(size: Self.orbSize + 6, color: tealColor)
+        }
+    }
+
     // MARK: - Idle
 
     private var idleContent: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "mic.fill")
-                .font(.system(size: 9))
-                .foregroundStyle(appState.modelLoaded ? .white.opacity(0.45) : .orange)
-
+        ZStack {
             if appState.modelLoading {
-                ProgressView()
-                    .controlSize(.mini)
-                    .tint(.white)
-                Text(appState.modelLoadProgress > 0
-                     ? (appState.modelIsDownloading
-                        ? "Downloading \(Int(appState.modelLoadProgress * 100))%"
-                        : "Switching model...")
-                     : "Loading...")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.5))
+                ModelLoadRing(progress: appState.modelLoadProgress,
+                              size: Self.orbSize - 8,
+                              color: tealColor)
+
+                if appState.modelIsDownloading, appState.modelLoadProgress > 0 {
+                    Text("\(Int(appState.modelLoadProgress * 100))%")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                } else {
+                    Image(systemName: "arrow.down")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
             } else if !appState.modelLoaded {
-                Text("No model")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.orange.opacity(0.7))
+                Image(systemName: "mic.slash.fill")
+                    .font(.system(size: 17))
+                    .foregroundStyle(.orange.opacity(0.85))
             } else {
-                Text("Right ⌥")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.45))
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 17))
+                    .foregroundStyle(.white.opacity(0.6))
             }
         }
     }
@@ -72,30 +93,13 @@ struct FlowBarView: View {
     // MARK: - Recording
 
     private var recordingContent: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(.red)
-                .frame(width: 5, height: 5)
-                .modifier(PulseAnimation())
-
-            VoiceDots(level: appState.audioLevel)
-
-            Text("Listening...")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.6))
-        }
+        VoiceBars(level: appState.audioLevel)
     }
 
     // MARK: - Transcribing
 
     private var transcribingContent: some View {
-        HStack(spacing: 6) {
-            BouncingDots()
-
-            Text("Transcribing...")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.7))
-        }
+        BouncingDots()
     }
 
     // MARK: - Helpers
