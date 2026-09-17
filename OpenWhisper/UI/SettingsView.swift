@@ -137,8 +137,14 @@ struct SettingsView: View {
 
                 OWRowDivider()
 
-                OWSettingRow(icon: "keyboard", title: "Trigger") {
-                    KeyCap("Hold Right ⌥")
+                OWSettingRow(icon: "keyboard", title: "Hold to talk") {
+                    Picker("", selection: $appState.hotkeyTrigger) {
+                        ForEach(HotkeyTrigger.allCases) { trigger in
+                            Text(trigger.label).tag(trigger)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: OW.controlWidth, alignment: .trailing)
                 }
             }
 
@@ -510,23 +516,6 @@ struct InlineNote: View {
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 9)
-    }
-}
-
-struct KeyCap: View {
-    let text: String
-
-    init(_ text: String) {
-        self.text = text
-    }
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: 11, weight: .medium, design: .rounded))
-            .padding(.horizontal, 9)
-            .padding(.vertical, 4)
-            .background(Capsule().fill(Color.primary.opacity(0.08)))
-            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.09), lineWidth: 0.5))
     }
 }
 

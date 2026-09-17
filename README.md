@@ -10,7 +10,7 @@ No cloud. No subscription. No data collection. Just fast, accurate voice typing 
 
 - **100% Local & Private** — All speech recognition runs on-device. No audio ever leaves your Mac.
 - **Offline Voice-to-Text** — Works without internet. Transcribe speech to text anywhere.
-- **Hold-to-Talk** — Hold Right ⌥ (Option), speak, release. Text appears at your cursor.
+- **Hold-to-Talk** — Hold Right ⌥ (Option) or Right ⌘ (Command), speak, release. Text appears at your cursor.
 - **Hands-Free Mode** — While holding Right ⌥, tap Space to lock recording on. Talk as long as you want, then tap Space again to stop.
 - **Works in Any App** — VS Code, Terminal, Chrome, Slack, Notes, Pages — anywhere you can type.
 - **AI Grammar Cleanup** — Optional local LLM removes "um", "uh", fixes punctuation (via Ollama).
@@ -71,11 +71,13 @@ OpenWhisper has two recording modes — pick whichever fits the moment.
 
 **Hold Right ⌥ (Option)**, speak, release. Text appears at your cursor.
 
+Prefer Right ⌘ (Command)? Change **Hold to talk** in settings. Pressing another key while holding the trigger (e.g. Right ⌘C) cancels the recording, so shortcuts keep working.
+
 ### Hands-Free Mode (long dictation)
 
 **Hold Right ⌥, then tap Space** while still holding — recording locks on. Release Option freely and keep talking. **Tap Space again** to stop, transcribe, and paste.
 
-Use hands-free when you don't want to keep a finger on Option — long emails, blog drafts, anything multi-sentence.
+Use hands-free when you don't want to keep a finger on the trigger key — long emails, blog drafts, anything multi-sentence.
 
 ### How it works
 
@@ -110,6 +112,7 @@ Models are downloaded once from HuggingFace and cached locally.
 | **LLM Cleanup** | On/Off — Ollama grammar correction | On |
 | **Auto-paste** | On = paste at cursor, Off = clipboard only | On |
 | **Flow Bar** | Show/hide the floating status indicator | On |
+| **Hold to talk** | Right ⌥ or Right ⌘ | Right ⌥ |
 
 ## Optional: Local LLM Grammar Cleanup
 
@@ -152,7 +155,7 @@ OpenWhisper.app (menu bar)
 ├── WhisperTranscriber — WhisperKit (CoreML + Apple Neural Engine)
 ├── LLMCleanup         — Ollama HTTP API (localhost:11434)
 ├── TextInjector       — NSPasteboard + CGEvent Cmd+V
-├── GlobalHotkey       — Right ⌥ via NSEvent + Space lock via CGEventTap
+├── GlobalHotkey       — Right ⌥/⌘ via NSEvent + Space lock via CGEventTap
 └── UI
     ├── MenuBar + Settings popover
     └── FlowBar (floating NSPanel with voice-reactive animation)

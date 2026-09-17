@@ -36,6 +36,12 @@ final class AppState {
     var autoPasteEnabled: Bool {
         didSet { UserDefaults.standard.set(autoPasteEnabled, forKey: "autoPasteEnabled") }
     }
+    var hotkeyTrigger: HotkeyTrigger {
+        didSet {
+            UserDefaults.standard.set(hotkeyTrigger.rawValue, forKey: "hotkeyTrigger")
+            hotkey?.trigger = hotkeyTrigger
+        }
+    }
     var launchAtLogin: Bool {
         didSet {
             do {
@@ -116,6 +122,7 @@ final class AppState {
         llmCleanupEnabled = defaults.object(forKey: "llmCleanupEnabled") as? Bool ?? true
         flowBarEnabled = defaults.object(forKey: "flowBarEnabled") as? Bool ?? true
         autoPasteEnabled = defaults.object(forKey: "autoPasteEnabled") as? Bool ?? true
+        hotkeyTrigger = defaults.string(forKey: "hotkeyTrigger").flatMap(HotkeyTrigger.init) ?? .rightOption
         launchAtLogin = SMAppService.mainApp.status == .enabled
         inputDeviceUID = defaults.string(forKey: "inputDeviceUID")
     }
@@ -151,15 +158,19 @@ final class AppState {
 
         // Register global hotkey
         hotkey = GlobalHotkey(
+            trigger: hotkeyTrigger,
             onPress: { [weak self] in
                 Task { @MainActor in self?.startRecording() }
             },
             onRelease: { [weak self] in
                 Task { @MainActor in self?.stopRecording() }
+            },
+            onCancel: { [weak self] in
+                Task { @MainActor in self?.cancelRecording() }
             }
         )
         hotkey?.register()
-        owLog("[OpenWhisper] Hotkey registered (Right Option)")
+        owLog("[OpenWhisper] Hotkey registered (\(hotkeyTrigger.label))")
 
         // Load Whisper model
         owLog("[OpenWhisper] Loading model: \(whisperModel)...")
@@ -231,6 +242,16 @@ final class AppState {
             }
         }
 
+    }
+
+    /// Stop and throw the audio away — the trigger key was used for a keyboard shortcut.
+    func cancelRecording() {
+        guard recordingState == .recording else { return }
+        recordingTimer?.invalidate()
+        recordingTimer = nil
+        _ = audioEngine?.stopRecording()
+        recordingState = .idle
+        owLog("[OpenWhisper] Recording cancelled (trigger used in a shortcut)")
     }
 
     func stopRecording() {
