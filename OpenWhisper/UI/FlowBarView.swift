@@ -3,101 +3,67 @@ import SwiftUI
 struct FlowBarView: View {
     @Environment(AppState.self) var appState
 
-    /// Diameter of the orb — 50% larger than the old 32pt pill.
-    static let orbSize: CGFloat = 48
-    /// Canvas the orb sits in, leaving room for the audio-reactive halo.
-    static let canvasSize: CGFloat = 64
+    /// Diameter of the clickable/draggable area around the mic.
+    static let hitSize: CGFloat = 48
+    /// Transparent canvas the mic sits in, leaving room for the neon glow to bloom.
+    static let canvasSize: CGFloat = 96
 
     var body: some View {
         ZStack {
-            halo
-
-            orbBackground
-
-            switch appState.recordingState {
-            case .idle:
+            if isIdle {
                 idleContent
-            case .recording:
-                recordingContent
-            case .transcribing:
-                transcribingContent
+                    .opacity(0.75)
+                    // Collapses back down from the lit size.
+                    .transition(.scale(scale: NeonMic.litSize / NeonMic.offSize).combined(with: .opacity))
+            } else {
+                // One view for recording and transcribing, so the tube re-colours instead of re-igniting.
+                NeonMic(style: appState.recordingState == .transcribing
+                        ? .transcribing
+                        : .recording(level: normalizedLevel))
+                    // Springs up from the resting size.
+                    .transition(.scale(scale: NeonMic.offSize / NeonMic.litSize).combined(with: .opacity))
             }
         }
         .frame(width: Self.canvasSize, height: Self.canvasSize)
-        .opacity(isIdle ? 0.45 : 1.0)
-        .animation(.spring(duration: 0.3), value: appState.recordingState)
+        .animation(.spring(response: 0.35, dampingFraction: 0.55), value: isIdle)
     }
 
     private var isIdle: Bool {
         appState.recordingState == .idle
     }
 
-    // MARK: - Orb chrome
-
-    private var orbBackground: some View {
-        ZStack {
-            Circle()
-                .fill(Color.black.opacity(0.55))
-            Circle()
-                .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
-        }
-        .frame(width: Self.orbSize, height: Self.orbSize)
-        .shadow(color: .black.opacity(0.3), radius: 10, y: 3)
-    }
-
-    /// Ring that breathes with the mic level while recording, and spins while transcribing.
-    @ViewBuilder
-    private var halo: some View {
-        switch appState.recordingState {
-        case .idle:
-            EmptyView()
-        case .recording:
-            LevelHalo(level: appState.audioLevel, size: Self.orbSize, color: .red)
-        case .transcribing:
-            RotatingArc(size: Self.orbSize + 6, color: tealColor)
-        }
+    private var normalizedLevel: CGFloat {
+        CGFloat(min(max(appState.audioLevel * 8, 0), 1))
     }
 
     // MARK: - Idle
 
+    @ViewBuilder
     private var idleContent: some View {
-        ZStack {
-            if appState.modelLoading {
+        if appState.modelLoading {
+            ZStack {
                 ModelLoadRing(progress: appState.modelLoadProgress,
-                              size: Self.orbSize - 8,
+                              size: 28,
                               color: tealColor)
+                    .shadow(color: .black.opacity(0.35), radius: 2)
 
                 if appState.modelIsDownloading, appState.modelLoadProgress > 0 {
-                    Text("\(Int(appState.modelLoadProgress * 100))%")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
+                    Text("\(Int(appState.modelLoadProgress * 100))")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.55), radius: 1.5)
                 } else {
-                    Image(systemName: "arrow.down")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.6))
+                    NeonMic(style: .off)
                 }
-            } else if !appState.modelLoaded {
-                Image(systemName: "mic.slash.fill")
-                    .font(.system(size: 17))
-                    .foregroundStyle(.orange.opacity(0.85))
-            } else {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 17))
-                    .foregroundStyle(.white.opacity(0.6))
             }
+        } else if !appState.modelLoaded {
+            Image(systemName: "mic.slash")
+                .font(.system(size: NeonMic.offSize, weight: .light))
+                .foregroundStyle(.orange)
+                .shadow(color: .black.opacity(0.55), radius: 1.5)
+        } else {
+            NeonMic(style: .off)
         }
-    }
-
-    // MARK: - Recording
-
-    private var recordingContent: some View {
-        VoiceBars(level: appState.audioLevel)
-    }
-
-    // MARK: - Transcribing
-
-    private var transcribingContent: some View {
-        BouncingDots()
     }
 
     // MARK: - Helpers

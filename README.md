@@ -81,7 +81,7 @@ Use hands-free when you don't want to keep a finger on the trigger key — long 
 
 ### How it works
 
-1. **Hold Right ⌥** → recording starts, Flow Bar shows "Listening..." with animated dots
+1. **Hold Right ⌥** → recording starts, the floating mic lights up in pink neon
 2. **(Optional) Tap Space** while still holding Option → recording locks into hands-free; release Option whenever
 3. **Speak** → audio captured locally at 16 kHz mono
 4. **Release Option** (hold mode) or **tap Space** (hands-free) → audio transcribed by on-device Whisper model
