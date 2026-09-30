@@ -1,97 +1,135 @@
 import SwiftUI
 
-/// The flow bar's listening indicator: a glowing orb that breathes and swells with your voice.
+/// The flow bar's orb: a soft-edged disc of flat colour wedges that sweep around like a pinwheel.
+/// At rest it sits small and grey; while listening it turns full colour and swells with your voice.
 struct PulsingOrb: View {
     enum Style {
-        /// Hot-pink orb; swells and sends out ripples with the mic level (0…1).
+        /// Small monochrome disc with a few slow wedges.
+        case idle
+        /// Green-led palette; wedges widen and the disc swells with the mic level (0…1).
         case recording(level: CGFloat)
-        /// Cyan orb breathing slowly while the transcript is worked out.
+        /// Blue-led palette while the transcript is worked out.
         case transcribing
     }
 
     let style: Style
 
-    /// Resting diameter of the sphere, before breathing and voice swell.
-    static let diameter: CGFloat = 24
+    static let idleDiameter: CGFloat = 16
+    static let diameter: CGFloat = 28
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-            orb(at: context.date.timeIntervalSinceReferenceDate)
+        // Idle runs at a lower frame rate; its wedges barely move.
+        TimelineView(.animation(minimumInterval: isIdle ? 1 / 15 : 1 / 30)) { context in
+            disc(at: context.date.timeIntervalSinceReferenceDate)
         }
+        .frame(width: size, height: size)
         // Voice swell is animated separately so it eases between level samples instead of jumping.
-        .scaleEffect(1 + level * 0.3)
+        .scaleEffect(1 + level * 0.25)
         .animation(.easeOut(duration: 0.12), value: level)
     }
+
+    private var size: CGFloat { isIdle ? Self.idleDiameter : Self.diameter }
 
     private var level: CGFloat {
         switch style {
         case .recording(let level): min(max(level, 0), 1)
-        case .transcribing: 0
+        case .idle, .transcribing: 0
         }
     }
 
-    private var isTranscribing: Bool {
-        if case .transcribing = style { return true }
+    private var isIdle: Bool {
+        if case .idle = style { return true }
         return false
     }
 
-    // MARK: - Orb
+    // MARK: - Disc
 
-    private func orb(at t: TimeInterval) -> some View {
-        let (core, halo, deep) = palette
-        // Slow breath while transcribing, a quicker heartbeat while listening.
-        let breath = CGFloat(sin(t * (isTranscribing ? 2.4 : 4.2)) * 0.5 + 0.5)
-        let glow = isTranscribing ? 0.35 + breath * 0.35 : 0.4 + level * 0.6
-
-        return ZStack {
-            // Soft haze behind everything so the orb lights up the area around it.
-            RadialGradient(colors: [halo.opacity(0.25 + glow * 0.25), deep.opacity(0.1), .clear],
-                           center: .center, startRadius: 2, endRadius: 44)
-
-            ripples(at: t, color: halo)
-
-            Circle()
-                .fill(RadialGradient(colors: [core, halo, deep],
-                                     center: UnitPoint(x: 0.38, y: 0.32),
-                                     startRadius: 0,
-                                     endRadius: Self.diameter * 0.75))
-                .overlay(Circle().strokeBorder(.white.opacity(0.35), lineWidth: 0.5))
-                .frame(width: Self.diameter, height: Self.diameter)
-                .scaleEffect(0.92 + breath * 0.1)
-                // Outer radii stay under ~16pt so the bloom fades out before the canvas edge clips it.
-                .shadow(color: halo, radius: 3)
-                .shadow(color: halo.opacity(0.5 + glow * 0.4), radius: 7 + glow * 5)
-                .shadow(color: deep.opacity(0.3 + glow * 0.3), radius: 12 + glow * 4)
-        }
+    /// One flat wedge fanning out from a pivot that drifts around the centre.
+    private struct Blade {
+        /// Index into the palette's wedge colours; nil cuts a see-through slice.
+        let color: Int?
+        /// Radians per second; negative turns the other way.
+        let speed: Double
+        let phase: Double
+        /// Angular width in radians.
+        let width: Double
     }
 
-    /// Rings that drift out from the sphere and fade; louder speech makes them brighter.
-    private func ripples(at t: TimeInterval, color: Color) -> some View {
-        let period = isTranscribing ? 2.4 : 1.4
-        let strength = isTranscribing ? 0.35 : 0.3 + level * 0.7
-        return ZStack {
-            ForEach(0..<2, id: \.self) { i in
-                let phase = CGFloat((t / period + Double(i) / 2).truncatingRemainder(dividingBy: 1))
-                Circle()
-                    .stroke(color, lineWidth: 1.5 - phase)
-                    .frame(width: Self.diameter, height: Self.diameter)
-                    // Grows out to ~64pt, inside the 96pt canvas.
-                    .scaleEffect(1 + phase * 1.6)
-                    .opacity(Double(1 - phase) * strength)
+    private static let blades: [Blade] = [
+        Blade(color: 0, speed: 0.7, phase: 0, width: 2.2),
+        Blade(color: 1, speed: -0.5, phase: 2.0, width: 1.7),
+        Blade(color: 2, speed: 0.4, phase: 4.0, width: 1.5),
+        Blade(color: 3, speed: 1.1, phase: 1.0, width: 1.2),
+        Blade(color: 4, speed: -0.8, phase: 3.0, width: 1.0),
+        Blade(color: nil, speed: 1.4, phase: 5.0, width: 0.4),
+    ]
+
+    private func disc(at t: TimeInterval) -> some View {
+        let (base, wedges) = palette
+        // Idle keeps just two slow wedges; the colour states use them all.
+        let blades = isIdle ? Array(Self.blades.prefix(2)) : Self.blades
+        let pace = isIdle ? 0.25 : 1.0
+        let spread = 1 + Double(level) * 0.4
+        // Gentle breathing on top of the voice swell.
+        let breath = 0.96 + 0.04 * sin(t * (isIdle ? 1.2 : 3.0))
+
+        return Canvas { context, canvas in
+            let centre = CGPoint(x: canvas.width / 2, y: canvas.height / 2)
+            let radius = canvas.width / 2
+            context.fill(Path(ellipseIn: CGRect(origin: .zero, size: canvas)), with: .color(base))
+
+            for blade in blades {
+                let angle = blade.phase + t * blade.speed * pace
+                // Pivots sit well off-centre so wedges read as sweeping planes rather than pie slices.
+                let pivot = CGPoint(x: centre.x + cos(angle * 0.6 + blade.phase) * radius * 0.35,
+                                    y: centre.y + sin(angle * 0.6 + blade.phase) * radius * 0.35)
+                let width = blade.width * spread * (1 + 0.3 * sin(t * blade.speed * pace * 1.7 + blade.phase))
+
+                var wedge = Path()
+                wedge.move(to: pivot)
+                wedge.addArc(center: pivot, radius: radius * 2,
+                             startAngle: .radians(angle), endAngle: .radians(angle + width),
+                             clockwise: false)
+                wedge.closeSubpath()
+
+                if let color = blade.color {
+                    context.fill(wedge, with: .color(wedges[color % wedges.count]))
+                } else {
+                    var cut = context
+                    cut.blendMode = .destinationOut
+                    cut.fill(wedge, with: .color(.black))
+                }
             }
         }
+        // Softens the seams between wedges without losing their shape.
+        .blur(radius: size * 0.07)
+        // Feathers the rim so the disc has no hard outline.
+        .mask(RadialGradient(stops: [.init(color: .black, location: 0.4),
+                                     .init(color: .clear, location: 1)],
+                             center: .center, startRadius: 0, endRadius: size / 2))
+        .scaleEffect(breath)
     }
 
-    private var palette: (core: Color, halo: Color, deep: Color) {
+    private var palette: (base: Color, wedges: [Color]) {
         switch style {
-        case .transcribing:
-            (Color(red: 0.88, green: 1.0, blue: 1.0),   // white-hot cyan
-             Color(red: 0.0, green: 0.85, blue: 1.0),   // electric cyan
-             Color(red: 0.35, green: 0.2, blue: 0.9))   // indigo
+        case .idle:
+            // Mid-grey base so the disc reads on both light and dark desktops.
+            (Color(white: 0.6),
+             [Color(white: 0.3), Color(white: 0.95)])
         case .recording:
-            (Color(red: 1.0, green: 0.9, blue: 0.97),   // white-hot pink
-             Color(red: 1.0, green: 0.15, blue: 0.65),  // hot magenta
-             Color(red: 0.5, green: 0.1, blue: 0.9))    // violet
+            (Color(red: 0.05, green: 0.62, blue: 0.2),       // leaf green
+             [Color(red: 0.0, green: 0.3, blue: 0.06),       // dark green
+              Color(red: 0.8, green: 0.93, blue: 0.2),       // lime
+              Color(red: 0.75, green: 0.48, blue: 0.1),      // ochre
+              Color(red: 1.0, green: 0.5, blue: 0.8),        // pink
+              Color(red: 0.1, green: 0.7, blue: 1.0)])       // sky blue
+        case .transcribing:
+            (Color(red: 0.15, green: 0.45, blue: 1.0),       // cobalt
+             [Color(red: 0.05, green: 0.12, blue: 0.45),     // navy
+              Color(red: 0.3, green: 0.9, blue: 1.0),        // cyan
+              Color(red: 0.7, green: 0.55, blue: 1.0),       // lilac
+              Color(red: 0.5, green: 1.0, blue: 0.8),        // mint
+              Color(red: 0.9, green: 0.95, blue: 1.0)])      // ice
         }
     }
 }

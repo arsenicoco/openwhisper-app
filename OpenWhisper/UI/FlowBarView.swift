@@ -7,7 +7,7 @@ struct FlowBarView: View {
     static let hitSize: CGFloat = 48
     /// Transparent canvas the indicator sits in, leaving room for the orb's glow and ripples.
     static let canvasSize: CGFloat = 96
-    /// Resting mic glyph: small hairline so it barely sits on screen.
+    /// Crossed-out mic shown when no model is loaded.
     static let micSize: CGFloat = 12
 
     var body: some View {
@@ -15,15 +15,15 @@ struct FlowBarView: View {
             if isIdle {
                 idleContent
                     .opacity(0.75)
-                    // Collapses back down from the orb's size.
-                    .transition(.scale(scale: PulsingOrb.diameter / Self.micSize).combined(with: .opacity))
+                    // Collapses back down from the active orb's size.
+                    .transition(.scale(scale: PulsingOrb.diameter / PulsingOrb.idleDiameter).combined(with: .opacity))
             } else {
                 // One view for recording and transcribing, so the orb re-colours instead of popping in again.
                 PulsingOrb(style: appState.recordingState == .transcribing
                            ? .transcribing
                            : .recording(level: normalizedLevel))
-                    // Springs up from the resting mic's size.
-                    .transition(.scale(scale: Self.micSize / PulsingOrb.diameter).combined(with: .opacity))
+                    // Springs up from the resting orb's size.
+                    .transition(.scale(scale: PulsingOrb.idleDiameter / PulsingOrb.diameter).combined(with: .opacity))
             }
         }
         .frame(width: Self.canvasSize, height: Self.canvasSize)
@@ -55,7 +55,7 @@ struct FlowBarView: View {
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.55), radius: 1.5)
                 } else {
-                    restingMic
+                    PulsingOrb(style: .idle)
                 }
             }
         } else if !appState.modelLoaded {
@@ -64,17 +64,8 @@ struct FlowBarView: View {
                 .foregroundStyle(.orange)
                 .shadow(color: .black.opacity(0.55), radius: 1.5)
         } else {
-            restingMic
+            PulsingOrb(style: .idle)
         }
-    }
-
-    /// Plain glyph with a soft dark edge so it reads on light backgrounds.
-    private var restingMic: some View {
-        Image(systemName: "mic")
-            .font(.system(size: Self.micSize, weight: .light))
-            .foregroundStyle(.white.opacity(0.9))
-            .shadow(color: .black.opacity(0.6), radius: 1)
-            .shadow(color: .black.opacity(0.2), radius: 3)
     }
 
     // MARK: - Helpers
