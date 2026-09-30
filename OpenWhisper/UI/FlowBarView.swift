@@ -5,23 +5,25 @@ struct FlowBarView: View {
 
     /// Diameter of the clickable/draggable area around the mic.
     static let hitSize: CGFloat = 48
-    /// Transparent canvas the mic sits in, leaving room for the neon glow to bloom.
+    /// Transparent canvas the indicator sits in, leaving room for the orb's glow and ripples.
     static let canvasSize: CGFloat = 96
+    /// Resting mic glyph: small hairline so it barely sits on screen.
+    static let micSize: CGFloat = 12
 
     var body: some View {
         ZStack {
             if isIdle {
                 idleContent
                     .opacity(0.75)
-                    // Collapses back down from the lit size.
-                    .transition(.scale(scale: NeonMic.litSize / NeonMic.offSize).combined(with: .opacity))
+                    // Collapses back down from the orb's size.
+                    .transition(.scale(scale: PulsingOrb.diameter / Self.micSize).combined(with: .opacity))
             } else {
-                // One view for recording and transcribing, so the tube re-colours instead of re-igniting.
-                NeonMic(style: appState.recordingState == .transcribing
-                        ? .transcribing
-                        : .recording(level: normalizedLevel))
-                    // Springs up from the resting size.
-                    .transition(.scale(scale: NeonMic.offSize / NeonMic.litSize).combined(with: .opacity))
+                // One view for recording and transcribing, so the orb re-colours instead of popping in again.
+                PulsingOrb(style: appState.recordingState == .transcribing
+                           ? .transcribing
+                           : .recording(level: normalizedLevel))
+                    // Springs up from the resting mic's size.
+                    .transition(.scale(scale: Self.micSize / PulsingOrb.diameter).combined(with: .opacity))
             }
         }
         .frame(width: Self.canvasSize, height: Self.canvasSize)
@@ -53,17 +55,26 @@ struct FlowBarView: View {
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.55), radius: 1.5)
                 } else {
-                    NeonMic(style: .off)
+                    restingMic
                 }
             }
         } else if !appState.modelLoaded {
             Image(systemName: "mic.slash")
-                .font(.system(size: NeonMic.offSize, weight: .light))
+                .font(.system(size: Self.micSize, weight: .light))
                 .foregroundStyle(.orange)
                 .shadow(color: .black.opacity(0.55), radius: 1.5)
         } else {
-            NeonMic(style: .off)
+            restingMic
         }
+    }
+
+    /// Plain glyph with a soft dark edge so it reads on light backgrounds.
+    private var restingMic: some View {
+        Image(systemName: "mic")
+            .font(.system(size: Self.micSize, weight: .light))
+            .foregroundStyle(.white.opacity(0.9))
+            .shadow(color: .black.opacity(0.6), radius: 1)
+            .shadow(color: .black.opacity(0.2), radius: 3)
     }
 
     // MARK: - Helpers
